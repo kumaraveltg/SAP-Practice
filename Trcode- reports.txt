@@ -1,0 +1,689 @@
+se11 - data dictionary
+se80 - 
+sm30 - data entry
+se93 - transaction code generator
+se41 - toolbar- pfstatus
+se37 - function module
+shd0 = variant creation - for each transaction code
+sm12 - lock objects to view - delete the objects like kill session.
+SE61 - HELP DOCUMENT
+SE24 - GLOBAL CLASS
+
+
+Classical Report- pfstatus, interactive report, parameter hide and visible , Field symbol for avoid the work area. 
+
+
+*&---------------------------------------------------------------------*
+*& Report ZKUMAR_EMP_EVENTS
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zkumar_emp_events LINE-COUNT 10(2).
+
+TYPES: BEGIN OF ty_emp,
+         empid      TYPE zempid,
+         empname    TYPE zfirstname,
+         department TYPE zdepartment,
+       END OF ty_emp.
+
+TYPES: BEGIN OF ty_comm,
+         empid   TYPE zempid,
+         mobile1 TYPE zumobile,
+         address TYPE zuaddress,
+         city    TYPE   ort01,
+       END OF ty_comm.
+
+PARAMETERS: p_r1 TYPE c RADIOBUTTON GROUP grp,
+            p_r2 TYPE c RADIOBUTTON GROUP grp.
+
+PARAMETERS:
+  p_empid TYPE zempid MODIF ID pid,
+  p_user  TYPE ernam,
+  p_date  TYPE erdat,
+  p_time  TYPE erzet.
+
+FIELD-SYMBOLS: <fs_emp> type ty_emp.  " field symbol is using no need a work area
+
+DATA: lt_emp TYPE STANDARD TABLE OF ty_emp.
+     " ls_emp TYPE ty_emp.
+
+DATA : lt_comm TYPE STANDARD TABLE OF ty_comm,
+       ls_comm TYPE ty_comm.
+
+DATA: lv_empid TYPE zempid.
+SELECT-OPTIONS : s_empid FOR lv_empid MODIF ID sid.
+
+
+
+INITIALIZATION.
+
+  p_empid = 'E001'.
+  p_user = sy-uname.
+  p_date = sy-datum.
+  p_time = sy-uzeit.
+
+  s_empid-sign = 'I'.
+  s_empid-option = 'BT'.
+  s_empid-Low = '10000000001'.
+  s_empid-High = 'E010'.
+  APPEND s_empid.
+
+
+AT SELECTION-SCREEN.
+
+  SELECT empid firstname department FROM zemployee_kumar INTO TABLE lt_emp WHERE empid IN s_empid.
+
+  IF lt_emp IS INITIAL.
+    MESSAGE 'Data is not Available' TYPE 'E'.
+  ELSE.
+    MESSAGE 'Data Exist' TYPE 'S'.
+  ENDIF.
+
+START-OF-SELECTION.
+
+  SELECT empid firstname department FROM zemployee_kumar INTO TABLE lt_emp WHERE empid IN s_empid.
+
+  SORT lt_emp BY empid.
+  IF lt_emp IS NOT INITIAL.
+    "LOOP AT lt_emp INTO ls_emp.
+     loop at lt_emp ASSIGNING <FS_EMP>.
+      AT FIRST.
+        WRITE: /5 'Employee Id', 20 'Employee Name',50 'Department'.
+      ENDAT.
+      ULINE.
+      if <FS_EMP> is ASSIGNED.
+
+      WRITE: /5 <FS_EMP>-empid, 20 <FS_EMP>-empname,50 <FS_EMP>-department.
+       ENDIF.
+    ENDLOOP.
+  ELSE.
+    MESSAGE 'Employee is not found' TYPE 'E'.
+  ENDIF.
+
+
+END-OF-SELECTION.
+  ULINE.
+
+TOP-OF-PAGE.
+ "SET PF-STATUS 'FUNCTION'.
+  WRITE: /5 'Employee Report-List', 80 'Created By:', p_user.
+  WRITE: /80 'Reported Date:',p_date,'Reported Time',p_time.
+
+END-OF-PAGE.
+  WRITE : 'It is Computer Generated Report'.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_empid. " selection of the parameter search
+
+AT SELECTION-SCREEN ON HELP-REQUEST FOR p_empid. "selection of the F4 key
+
+AT SELECTION-SCREEN OUTPUT.
+
+  IF p_r1 = 'X'.
+    LOOP AT SCREEN.
+      IF screen-group1 = 'SID'.
+        screen-active = 0.
+      ENDIF.
+      MODIFY SCREEN.
+    ENDLOOP.
+
+  ELSEIF p_r2 = 'X'.
+    LOOP AT SCREEN.
+      IF screen-group1 = 'PID'.
+        screen-active = 0.
+      ENDIF.
+      MODIFY SCREEN.
+    ENDLOOP.
+
+  ENDIF.
+
+
+AT LINE-SELECTION.
+  "BREAK-POINT.
+  DATA lv_emp TYPE zempid.
+  lv_emp =  sy-lisel+4(10).  "'1000000001'.  " first 10 characters from clicked line
+  "CONDENSE lv_emp NO-GAPS.
+
+  SELECT empid mobile1 address city
+    FROM zemployee_comm
+    INTO TABLE lt_comm
+    WHERE empid = lv_emp.
+
+  IF sy-subrc = 0.
+    LOOP AT lt_comm INTO ls_comm.
+      WRITE: / ls_comm-empid,20 ls_comm-mobile1,30 ls_comm-address, 70 ls_comm-city.
+    ENDLOOP.
+  ELSE.
+    MESSAGE 'No details found' TYPE 'S'.
+  ENDIF.
+
+*  AT USER-COMMAND.
+*  IF sy-ucomm EQ 'Back'.
+*    LEAVE TO SCREEN 0.
+*  ENDIF.
+*
+*  if sy-ucomm EQ 'ASCENDING'.
+*    sort lt_emp by empid.
+*     LOOP AT lt_emp INTO ls_emp.
+*      AT FIRST.
+*        WRITE: /5 'Employee Id', 20 'Employee Name',50 'Department'.
+*      ENDAT.
+*      ULINE.
+*      WRITE: /5 ls_emp-empid, 20 ls_emp-empname,50 ls_emp-department.
+*
+*    ENDLOOP.
+*    endif.
+*
+*    if sy-ucomm EQ 'DESCENDING'.
+*    sort lt_emp by empid DESCENDING.
+*     LOOP AT lt_emp INTO ls_emp.
+*      AT FIRST.
+*        WRITE: /5 'Employee Id', 20 'Employee Name',50 'Department'.
+*      ENDAT.
+*      ULINE.
+*      WRITE: /5 ls_emp-empid, 20 ls_emp-empname,50 ls_emp-department.
+*
+*    ENDLOOP.
+*    endif.
+
+    TOP-OF-PAGE DURING LINE-SELECTION.
+     WRITE: / 'Employee Id',20 'Mobile No',30 'Address', 70 'City'.
+
+
+* NOTE - ZSELECTION_KUMAR - LINE TABLE - TABLE TYPE, BEFORE WE NEED TO CREATE THE STRUCTURE OF SIGN,OPTION,LOW,HIGH.
+         LT_TABLE[]  
+
+FUNCTION zkumar_func_report. 
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     REFERENCE(I_S_EMPID) TYPE  ZSELECTION_KUMAR
+*"  TABLES
+*"      LT_TABLE TYPE  ZEMPLOYEE_STRUCTURE1_KUMAR
+*"  EXCEPTIONS
+*"      WRONG_INPUT
+*"----------------------------------------------------------------------
+
+  IF I_S_EMPID IS NOT INITIAL.
+    SELECT EMPID FIRSTNAME DEPARTMENT CTC CURRENCY FROM ZEMPLOYEE_KUMAR INTO TABLE LT_TABLE
+      WHERE EMPID IN I_S_EMPID.
+    ENDIF.
+IF LT_TABLE[] IS INITIAL.
+  RAISE WRONG_INPUT.
+  ENDIF.
+
+*IF I_EMPID IS NOT INITIAL.
+*  SELECT   empid
+*                firstname
+*                department
+*                ctc
+*                currency
+*    FROM zemployee_kumar
+*    INTO TABLE lt_data
+*    WHERE empid = i_empid.
+*    ENDIF.
+*  IF I_EMPID IS INITIAL.
+*    RAISE WRONG_INPUT.
+*    ENDIF.
+
+ENDFUNCTION.
+
+* NOT - RAGE OF SELECT OPTIONS SHOULD BE S_EMPID[] - LIST VALUE (PROGRAMMING TERMS)
+*&---------------------------------------------------------------------*
+*& Report ZKUMAR_FUNCTION_REPORT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZKUMAR_FUNCTION_REPORT.
+ 
+DATA: lt_emp TYPE ZEMPLOYEE_STRUCTURE1_KUMAR,
+      lv_empid TYPE zempid.
+
+SELECT-OPTIONS: s_empid FOR lv_empid.
+
+ CALL FUNCTION 'ZKUMAR_FUNC_REPORT'
+   EXPORTING
+     i_s_empid         = S_EMPID[]
+   tables
+     lt_table          = LT_EMP
+  EXCEPTIONS
+    WRONG_INPUT       = 1
+    OTHERS            = 2
+           .
+
+
+
+IF sy-subrc <> 0.
+  MESSAGE 'No data found' TYPE 'E'.
+ENDIF.
+
+LOOP AT lt_emp INTO DATA(ls_emp).
+  WRITE: / ls_emp-empid,
+           ls_emp-firstname,
+           ls_emp-department,
+           ls_emp-ctc,
+           ls_emp-currency.
+ENDLOOP.
+
+
+*&---------------------------------------------------------------------*
+*& Report ZKUMAR_SUBROUTINE_REPORT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZKUMAR_SUBROUTINE_REPORT.
+
+DATA: lt_emp TYPE ZEMPLOYEE_STRUCTURE1_KUMAR,
+
+      lv_empid TYPE zempid.
+
+
+SELECT-OPTIONS: s_empid FOR lv_empid.
+
+START-OF-SELECTION.
+PERFORM EMP_DATA USING S_EMPID[] CHANGING LT_EMP.
+
+LOOP AT LT_EMP INTO DATA(LS_EMP).
+  WRITE: / ls_emp-empid,
+           ls_emp-firstname,
+           ls_emp-department,
+           ls_emp-ctc,
+           ls_emp-currency.
+  ENDLOOP.
+
+END-OF-SELECTION.
+
+FORM EMP_DATA USING P_S_EMPID TYPE ZSELECTION_KUMAR
+              CHANGING P_LT_EMP TYPE ZEMPLOYEE_STRUCTURE1_KUMAR.
+
+ SELECT EMPID FIRSTNAME DEPARTMENT CTC CURRENCY FROM ZEMPLOYEE_KUMAR INTO TABLE P_LT_EMP
+   WHERE EMPID IN P_S_EMPID.
+
+ ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Report ZKUMAR_ALV_REPORT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zkumar_alv_report.
+
+TYPES: BEGIN OF ty_emp,
+         empid      TYPE zempid,
+         firstname  TYPE zfirstname,
+         department TYPE zdepartment,
+         ctc        TYPE dmbtr,
+         currency   TYPE zcurrency,
+       END OF ty_emp.
+
+TYPES: BEGIN OF ty_comm,
+         empid     TYPE zempid,
+         firstname TYPE zfirstname,
+         mobile1   TYPE zumobile,
+         address   TYPE zuaddress,
+         city      TYPE ort01,
+       END OF ty_comm.
+
+
+DATA: lt_emp TYPE STANDARD TABLE OF ty_emp,
+      ls_emp TYPE ty_emp.
+DATA: lt_comm TYPE STANDARD TABLE OF ty_comm,
+      ls_comm TYPE ty_comm.
+
+DATA: lt_fieldcat TYPE TABLE OF slis_fieldcat_alv,
+      ls_fieldcat TYPE slis_fieldcat_alv.
+DATA: lt_fieldcat1 TYPE TABLE OF slis_fieldcat_alv,
+      ls_fieldcat1 TYPE slis_fieldcat_alv.
+
+DATA:ls_layout TYPE slis_layout_alv.
+
+DATA: lv_empid TYPE zempid.
+SELECT-OPTIONS s_empid FOR lv_empid.
+
+START-OF-SELECTION.
+  SELECT empid firstname department ctc currency FROM zemployee_kumar INTO TABLE lt_emp WHERE empid IN s_empid .
+
+  "create defination
+
+  ls_fieldcat-fieldname = 'EMPID'.
+  ls_fieldcat-seltext_l = 'EMPLOYEEE ID'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'FIRSTNAME'.
+  ls_fieldcat-seltext_l = 'EMPLOYEEE NAME'.
+  ls_fieldcat-edit = 'X'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'DEPARTMENT'.
+  ls_fieldcat-seltext_l = 'DEPARTMENT'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'CTC'.
+  ls_fieldcat-seltext_l = 'CTC'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'CURRENCY'.
+  ls_fieldcat-seltext_l = 'CURRENCY'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  "dISPLAY ALV REPORT
+  ls_layout-colwidth_optimize = 'X'.
+  ls_layout-zebra = 'X'.
+
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK       = ' '
+*     I_BYPASSING_BUFFER      = ' '
+*     I_BUFFER_ACTIVE         = ' '
+      i_callback_program      = sy-repid    "'ZKUMAR_ALV_REPORT'
+*     I_CALLBACK_PF_STATUS_SET          = ' '
+      i_callback_user_command = 'SECONDARY_LIST '
+      i_callback_top_of_page  = 'TOP_PAGE '
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME        =
+*     I_BACKGROUND_ID         = ' '
+*     I_GRID_TITLE            =
+*     I_GRID_SETTINGS         =
+      is_layout               = ls_layout
+      it_fieldcat             = lt_fieldcat
+*     IT_EXCLUDING            =
+*     IT_SPECIAL_GROUPS       =
+*     IT_SORT                 =
+*     IT_FILTER               =
+*     IS_SEL_HIDE             =
+*     I_DEFAULT               = 'X'
+*     I_SAVE                  = ' '
+*     IS_VARIANT              =
+*     IT_EVENTS               =
+*     IT_EVENT_EXIT           =
+*     IS_PRINT                =
+*     IS_REPREP_ID            =
+*     I_SCREEN_START_COLUMN   = 0
+*     I_SCREEN_START_LINE     = 0
+*     I_SCREEN_END_COLUMN     = 0
+*     I_SCREEN_END_LINE       = 0
+*     I_HTML_HEIGHT_TOP       = 0
+*     I_HTML_HEIGHT_END       = 0
+*     IT_ALV_GRAPHICS         =
+*     IT_HYPERLINK            =
+*     IT_ADD_FIELDCAT         =
+*     IT_EXCEPT_QINFO         =
+*     IR_SALV_FULLSCREEN_ADAPTER        =
+*     O_PREVIOUS_SRAL_HANDLER =
+*     O_COMMON_HUB            =
+*   IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER =
+*     ES_EXIT_CAUSED_BY_USER  =
+    TABLES
+      t_outtab                = lt_emp
+    EXCEPTIONS
+      program_error           = 1
+      OTHERS                  = 2.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+FORM top_page.
+
+  DATA: lt_list TYPE TABLE OF slis_listheader,
+        ls_list TYPE slis_listheader.
+
+  ls_list-typ = 'H'.
+  ls_list-info = 'EMPLOYEE DETAILS ALV-REPORT'.
+  APPEND ls_list TO lt_list.
+  CLEAR ls_list.
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      it_list_commentary = lt_list
+*     I_LOGO             =
+*     I_END_OF_LIST_GRID =
+*     I_ALV_FORM         =
+    .
+
+ENDFORM.
+
+FORM secondary_list USING r_ucomm LIKE sy-ucomm
+                      rs_selfield TYPE slis_selfield.
+
+  SELECT a~empid b~firstname a~mobile1 a~address a~city FROM zemployee_comm AS a INNER JOIN zemployee_kumar AS b ON a~empid = b~empid
+  into table lt_comm where A~empid = rs_selfield-value.
+
+  IF lt_comm IS NOT INITIAL.
+
+   CLEAR ls_fieldcat1.
+
+   LS_FIELDCAT1-fieldname = 'EMPID'.
+   LS_FIELDCAT1-seltext_l = 'EMPLOYEE ID'.
+   APPEND LS_FIELDCAT1 TO LT_FIELDCAT1.
+   CLEAR LS_FIELDCAT1.
+
+   LS_FIELDCAT1-fieldname = 'FIRSTNAME'.
+   LS_FIELDCAT1-seltext_l = 'EMPLOYEE NAME'.
+   APPEND LS_FIELDCAT1 TO LT_FIELDCAT1.
+   CLEAR LS_FIELDCAT1.
+
+   LS_FIELDCAT1-fieldname = 'MOBILE1'.
+   LS_FIELDCAT1-seltext_l = 'MOBILE'.
+   APPEND LS_FIELDCAT1 TO LT_FIELDCAT1.
+   CLEAR LS_FIELDCAT1.
+   LS_FIELDCAT1-fieldname = 'ADDRESS'.
+   LS_FIELDCAT1-seltext_l = 'ADDRESS'.
+   APPEND LS_FIELDCAT1 TO LT_FIELDCAT1.
+    CLEAR LS_FIELDCAT1.
+   LS_FIELDCAT1-fieldname = 'CITY'.
+   LS_FIELDCAT1-seltext_l = 'CITY'.
+   APPEND LS_FIELDCAT1 TO LT_FIELDCAT1.
+    CLEAR LS_FIELDCAT1.
+
+     ls_layout-colwidth_optimize = 'X'.
+  ls_layout-zebra = 'X'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+   EXPORTING
+*     I_INTERFACE_CHECK                 = ' '
+*     I_BYPASSING_BUFFER                = ' '
+*     I_BUFFER_ACTIVE                   = ' '
+     I_CALLBACK_PROGRAM                = SY-REPID
+*     I_CALLBACK_PF_STATUS_SET          = ' '
+*     I_CALLBACK_USER_COMMAND           = ' '
+     I_CALLBACK_TOP_OF_PAGE            = 'TOP_PAGE1'
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME                  =
+*     I_BACKGROUND_ID                   = ' '
+*     I_GRID_TITLE                      =
+*     I_GRID_SETTINGS                   =
+     IS_LAYOUT                         = LS_LAYOUT
+     IT_FIELDCAT                       = LT_FIELDCAT1
+*     IT_EXCLUDING                      =
+*     IT_SPECIAL_GROUPS                 =
+*     IT_SORT                           =
+*     IT_FILTER                         =
+*     IS_SEL_HIDE                       =
+*     I_DEFAULT                         = 'X'
+*     I_SAVE                            = ' '
+*     IS_VARIANT                        =
+*     IT_EVENTS                         =
+*     IT_EVENT_EXIT                     =
+*     IS_PRINT                          =
+*     IS_REPREP_ID                      =
+*     I_SCREEN_START_COLUMN             = 0
+*     I_SCREEN_START_LINE               = 0
+*     I_SCREEN_END_COLUMN               = 0
+*     I_SCREEN_END_LINE                 = 0
+*     I_HTML_HEIGHT_TOP                 = 0
+*     I_HTML_HEIGHT_END                 = 0
+*     IT_ALV_GRAPHICS                   =
+*     IT_HYPERLINK                      =
+*     IT_ADD_FIELDCAT                   =
+*     IT_EXCEPT_QINFO                   =
+*     IR_SALV_FULLSCREEN_ADAPTER        =
+*     O_PREVIOUS_SRAL_HANDLER           =
+*     O_COMMON_HUB                      =
+*   IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER           =
+*     ES_EXIT_CAUSED_BY_USER            =
+    TABLES
+      t_outtab                          = LT_COMM
+   EXCEPTIONS
+     PROGRAM_ERROR                     = 1
+     OTHERS                            = 2
+            .
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+  ENDIF.
+
+ENDFORM.
+
+FORM TOP_PAGE1.
+  DATA: lt_list1 TYPE TABLE OF slis_listheader,
+        ls_list1 TYPE slis_listheader.
+
+  ls_list1-typ = 'H'.
+  ls_list1-info = 'EMPLOYEE COMMUNICATION DETAILS ALV-REPORT'.
+  APPEND ls_list1 TO lt_list1.
+  CLEAR ls_list1.
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      it_list_commentary = lt_list1
+*     I_LOGO             =
+*     I_END_OF_LIST_GRID =
+*     I_ALV_FORM         =
+    .
+  ENDFORM.
+
+Module pool - 1. create report module pool , connect to se80 or object button, create screen,create transaction, layout to design use the below code
+
+*----------------------------------------------------------------------*
+***INCLUDE ZKUMAR_MODULEP_STATUS_0100O01.
+*----------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*& Module STATUS_0100 OUTPUT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+TABLES: ZEMPLOYEE_KUMAR.
+TYPES: BEGIN OF ty_employee,
+         empid      TYPE zempid,
+         title       TYPE ztitle,
+         firstname   TYPE zfirstname,
+         lastname   TYPE  zlastname,
+         doj         TYPE psg_datjo,
+         department TYPE  zdepartment,
+         ctc         TYPE dmbtr,
+         currency   TYPE  zcurrency,
+       END OF ty_employee.
+
+DATA: LT_EMPLOYEE TYPE STANDARD TABLE OF TY_EMPLOYEE,
+      LS_EMPLOYEE TYPE TY_EMPLOYEE.
+
+
+
+module status_0100 output.
+SET PF-STATUS 'EMP'.
+SET TITLEBAR 'EMD'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+  IF sy-ucomm EQ 'BACK'.
+    LEAVE TO SCREEN 0.
+  ENDIF.
+
+  IF sy-ucomm EQ 'SUBMIT'.
+    SELECT EMPID, TITLE, FIRSTNAME, LASTNAME, DOJ, DEPARTMENT, CTC, CURRENCY FROM ZEMPLOYEE_KUMAR
+      INTO TABLE @LT_EMPLOYEE WHERE EMPID = @ZEMPLOYEE_KUMAR-EMPID.
+
+      "READ TABLE LT_EMPLOYEE INTO LS_EMPLOYEE WITH  KEY EMPID = ZEMPLOYEE_KUMAR-EMPID.
+
+      READ TABLE lt_employee INTO ls_employee INDEX 1.
+
+      IF SY-SUBRC EQ 0.
+        ZEMPLOYEE_KUMAR-EMPID = LS_EMPLOYEE-EMPID.
+        ZEMPLOYEE_KUMAR-TITLE = LS_EMPLOYEE-TITLE.
+        ZEMPLOYEE_KUMAR-FIRSTNAME = LS_EMPLOYEE-FIRSTNAME.
+        ZEMPLOYEE_KUMAR-LASTNAME = LS_EMPLOYEE-LASTNAME.
+        ZEMPLOYEE_KUMAR-DOJ = LS_EMPLOYEE-DOJ.
+        ZEMPLOYEE_KUMAR-DEPARTMENT = LS_EMPLOYEE-DEPARTMENT.
+        ZEMPLOYEE_KUMAR-CTC = LS_EMPLOYEE-CTC.
+        ZEMPLOYEE_KUMAR-CURRENCY = LS_EMPLOYEE-CURRENCY.
+        ENDIF.
+
+  ENDIF.
+ENDMODULE.
+
+*note declare the se24 - method like instance, static using below method in report.
+
+*&---------------------------------------------------------------------*
+*& Report ZKUMAR_CALLING_CLASS
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zkumar_calling_class.
+TYPES: BEGIN OF ty_emp,
+         empid      TYPE zempid,
+         department TYPE zdepartment,
+         firstname  TYPE zfirstname,
+         ctc        TYPE dmbtr,
+         currency   TYPE currency,
+       END OF ty_emp.
+
+DATA: lt_emp TYPE STANDARD TABLE OF ty_emp,
+      ls_emp TYPE ty_emp.
+
+DATA : lv_empid TYPE zempid.
+SELECT-OPTIONS : s_empid FOR lv_empid.
+PARAMETERS: p_empid TYPE zempid.
+
+* INSTANCE METHOD - create object using call method
+*START-OF-SELECTION.
+*  DATA : lo_emp TYPE REF TO zkmar_class_report.
+*  CREATE OBJECT lo_emp.
+*CALL METHOD lo_emp->employee_details
+* EXPORTING
+* "  p_empid          = P_EMPID
+* s_empid          = S_EMPID[]
+*  IMPORTING
+*    lt_table         = LT_EMP
+*  EXCEPTIONS
+*    wrong_employeeid = 1
+*    others           = 2
+*        .
+*IF sy-subrc <> 0.
+*MESSAGE 'Employee Data is not available' type 'E'.
+*ELSE.
+*  MESSAGE 'Employee Data is Available' type 's'.
+*ENDIF.
+
+*static method not created the object
+
+CALL METHOD zkmar_class_report=>employee_details
+  EXPORTING
+*   p_empid          =
+    s_empid          = s_empid[]
+  IMPORTING
+    lt_table         = lt_emp
+  EXCEPTIONS
+    wrong_employeeid = 1
+    others           = 2
+        .
+IF sy-subrc <> 0.
+MESSAGE 'Employee Data is not available' type 'E'.
+ELSE.
+  MESSAGE 'Employee Data is Available' type 'S'. "type casesenstive
+ENDIF.
+
+
+  LOOP AT lt_emp INTO ls_emp.
+    WRITE:/ ls_emp-empid,ls_emp-firstname,ls_emp-department,ls_emp-ctc,ls_emp-currency.
+  ENDLOOP.
